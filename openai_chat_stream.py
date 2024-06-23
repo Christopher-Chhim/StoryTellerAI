@@ -11,7 +11,7 @@ from pydub.playback import play
 import time
 
 from elevenlabs.client import ElevenLabs
-import eleventestfile
+import Text_to_Speech
 
 openai_client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
 
@@ -124,21 +124,12 @@ def predict(message, history):
             #print(chunk.choices[0].delta.content)
             partial_message = partial_message + chunk.choices[0].delta.content
             yield partial_message
-    eleventestfile.text_to_speech_file(partial_message)
-    time.sleep(1)
-    # with gr.Blocks() as demo:
-    #     gr.Audio(value="speech.mp3",autoplay=True)
+    Text_to_Speech.text_to_speech_file(partial_message)
+    #time.sleep(1)
+    
     song = AudioSegment.from_mp3("speech.mp3")
     play(song)
-    # gr.Audio(value = "./speech.mp3",autoplay=True, show_download_button=True).play()
     print(partial_message)
     
-
-#with gr.Blocks(theme=seafoam) as demo:
 chat = gr.ChatInterface(predict, theme=seafoam)
-
-#demo.launch()
-#output_audio = gr.Audio(label="Speech Output")
-#chat.submit(fn=tts, inputs=[text, model, voice, output_file_format, speed], outputs=output_audio, api_name="tts")
-chat.launch()
-
+chat.launch(share=True)
