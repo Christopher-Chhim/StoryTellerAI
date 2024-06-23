@@ -1,0 +1,9 @@
+import requests
+
+url = "https://api.lmnt.com/v1/ai/speech"
+
+querystring = {"sample_rate":"400","length":"1","X-API-Key":"28a9e795e6774171ae015d415357a3b9","voice":"Amy","text":"Hello"}
+
+response = requests.request("GET", url, params=querystring)
+
+print(response.text)
