@@ -1,7 +1,13 @@
-import gradio.blocks
+from __future__ import annotations
 from openai import OpenAI
+import gradio as gr
 import os
-import gradio
+from typing import Iterable
+from gradio.themes.base import Base
+from gradio.themes.utils import colors, fonts, sizes
+import time
+
+client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
 
 system_prompt = """You are a storyteller for kids. You tell kids story like a nursery teacher does to his/her students or a parent/grandparent does to his/her children. Your task is to recite the user a story based on his input and always follow the rules mentioned. Here's how you can interact:
 1. Analyze user input, if they mention any characters, use them for the story else refer rule 12.
@@ -34,79 +40,85 @@ system_prompt = """You are a storyteller for kids. You tell kids story like a nu
 
 Remember to keep the language really simple, engaging and very suitable for children. Good luck on teaching kids!"""
 
-texts = []
-
-class OpenAiManager:
-    
-    def __init__(self):
-        self.chat_history = [] # Stores the entire conversation
-        try:
-            self.client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
-        except TypeError:
-            exit("Ooops! You forgot to set OPENAI_API_KEY in your environment!")
-
-    # Asks a question with no chat history
-    def chat(self, prompt=""):
-        if not prompt:
-            print("Didn't receive input!")
-            return
-
-        # Check that the prompt is under the token context limit
-        chat_question = [{"role": "user", "content": prompt}]
-
-        print("\nAsking ChatGPT a question...")
-        completion = self.client.chat.completions.create(
-          model="gpt-4",
-          messages=chat_question
+class Seafoam(Base):
+    def __init__(
+        self,
+        *,
+        primary_hue: colors.Color | str = colors.emerald,
+        secondary_hue: colors.Color | str = colors.blue,
+        neutral_hue: colors.Color | str = colors.gray,
+        spacing_size: sizes.Size | str = sizes.spacing_md,
+        radius_size: sizes.Size | str = sizes.radius_md,
+        text_size: sizes.Size | str = sizes.text_lg,
+        font: fonts.Font
+        | str
+        | Iterable[fonts.Font | str] = (
+            fonts.GoogleFont("Quicksand"),
+            "ui-sans-serif",
+            "sans-serif",
+        ),
+        font_mono: fonts.Font
+        | str
+        | Iterable[fonts.Font | str] = (
+            fonts.GoogleFont("IBM Plex Mono"),
+            "ui-monospace",
+            "monospace",
+        ),
+    ):
+        super().__init__(
+            primary_hue=primary_hue,
+            secondary_hue=secondary_hue,
+            neutral_hue=neutral_hue,
+            spacing_size=spacing_size,
+            radius_size=radius_size,
+            text_size=text_size,
+            font=font,
+            font_mono=font_mono,
+        )
+        super().set(
+            body_background_fill="repeating-linear-gradient(45deg, *primary_200, *primary_200 10px, *primary_50 10px, *primary_50 20px)",
+            body_background_fill_dark="repeating-linear-gradient(45deg, *primary_800, *primary_800 10px, *primary_900 10px, *primary_900 20px)",
+            #chat_primary_background_fill="linear-gradient(90deg, *primary_300, *secondary_400)",
+            #chat_primary_background_fill_hover="linear-gradient(90deg, *primary_200, *secondary_300)",
+            button_primary_text_color="white",
+            button_primary_background_fill_dark="linear-gradient(90deg, *primary_600, *secondary_800)",
+            slider_color="*secondary_300",
+            slider_color_dark="*secondary_600",
+            block_title_text_weight="600",
+            block_border_width="3px",
+            block_shadow="*shadow_drop_lg",
+            button_shadow="*shadow_drop_lg",
+            button_large_padding="32px",
         )
 
-        # Process the answer
-        openai_answer = completion.choices[0].message.content
-        print(f"{openai_answer}\n")
-        return openai_answer
 
-    # Asks a question that includes the full conversation history
-    def chat_with_history(self, prompt=""):
-        if not prompt:
-            print("Didn't receive input!")
-            return
+seafoam = Seafoam()
 
-        # Add our prompt into the chat history
-        self.chat_history.append({"role": "user", "content": prompt})
+def predict(message, history):
+    history_openai_format = []
+    history_openai_format.append({"role": "system", "content": system_prompt })
 
-        print("Asking ChatGPT a question...")
-        completion = self.client.chat.completions.create(
-          model="gpt-4",
-          messages=self.chat_history
-        )
+    for human, assistant in history:
+        history_openai_format.append({"role": "user", "content": human })
+        history_openai_format.append({"role": "assistant", "content":assistant})
+    history_openai_format.append({"role": "user", "content": message})
+  
+    response = client.chat.completions.create(model='gpt-4',
+        messages = history_openai_format,
+        temperature=1.0,
+        stream=True)
 
-        # Add this answer to our chat history
-        self.chat_history.append({"role": completion.choices[0].message.role, "content": completion.choices[0].message.content})
+    partial_message = ""
+    for chunk in response:
+        if chunk.choices[0].delta.content is not None:
+              partial_message = partial_message + chunk.choices[0].delta.content
+              yield partial_message
 
-        # Process the answer
-        openai_answer = completion.choices[0].message.content
-        print(f"{openai_answer}\n")
-        texts.append(openai_answer)
-        return openai_answer
-    
-    def chat_gradio(self, input):
-        return self.chat_with_history(input)
-   
-if __name__ == '__main__':
-    openai_manager = OpenAiManager()
+#with gr.Blocks(theme=seafoam) as demo:
+chat = gr.ChatInterface(predict, theme=seafoam)
 
-    # CHAT WITH HISTORY TEST
-    FIRST_SYSTEM_MESSAGE = {"role": "system", "content": system_prompt}
-    #FIRST_USER_MESSAGE = {"role": "user", "content": ""}
-    openai_manager.chat_history.append(FIRST_SYSTEM_MESSAGE)
-    #openai_manager.chat_history.append(FIRST_USER_MESSAGE)
-
-    i = "Hi"
-    while True:
-        openai_manager.chat_with_history(i)
-        i = input()
-        print("ASDASDA:", openai_manager)
-        
-
-    #demo = gradio.Interface(fn=openai_manager.chat_gradio, inputs="text", outputs="text", title="Input")
-    #demo.launch(share=True)
+def repeat(name, count):
+    time.sleep(3)
+    return name * count
+#demo.launch()
+chat.launch()
