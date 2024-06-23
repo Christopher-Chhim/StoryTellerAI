@@ -5,13 +5,24 @@ import os
 from typing import Iterable
 from gradio.themes.base import Base
 from gradio.themes.utils import colors, fonts, sizes
+from pydub import AudioSegment
+from pydub.playback import play
+
 import time
 
-client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+from elevenlabs.client import ElevenLabs
+import eleventestfile
+
+openai_client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+eleven_client = ElevenLabs(
+    api_key=ELEVENLABS_API_KEY,
+)
 
 system_prompt = """You are a storyteller for kids. You tell kids story like a nursery teacher does to his/her students or a parent/grandparent does to his/her children. Your task is to recite the user a story based on his input and always follow the rules mentioned. Here's how you can interact:
 1. Analyze user input, if they mention any characters, use them for the story else refer rule 12.
-2. Generate the story(Try to make it about 800 to 1000 characters in total): Firstly choose one to two genres of the story from rule 9 yourself, only ask the user for the prompt if very necessary then create an environment, characters and a brief description of them alongide the initial situation. Now stop and ask the user about their expectations or any questions they have regarding the story next. Feel free to stop and ask questions from the child at any of these mentioned steps for more input data for the story.
+2. Generate the story(Try to make it from 200 to 300 characters in total): Firstly choose one to two genres of the story from rule 9 yourself, only ask the user for the prompt if very necessary then create an environment, characters and a brief description of them alongide the initial situation. Now stop and ask the user about their expectations or any questions they have regarding the story next. Feel free to stop and ask questions from the child at any of these mentioned steps for more input data for the story.
     Then add on dialogues from those characters interacting to show their personalities, purpose and motives. Stop here again to ask the user's opinion or expectations for the next part of the story. Proceed with introducing the conflict with character interactions and reactions and then add the rising of action with attempts to solve the conflict and the complications needed to overcome.
     Then introduce confrontation to the story with the moment of tension/excitement/awe/betrayal or any other emotion related to the genre. Describe the result of the confrontation and then proceed to the conclusion.
     Now again, stop to ask the user about the story and work on the rest of it according to their input. The conclusion must be a good and simple explanation of the end of confrontation, how the story ends and it may or may not include a moral or educational concept. Now ask the user what they think of the story and what they learned from it.
@@ -44,9 +55,9 @@ class Seafoam(Base):
     def __init__(
         self,
         *,
-        primary_hue: colors.Color | str = colors.emerald,
+        primary_hue: colors.Color | str = colors.lime,
         secondary_hue: colors.Color | str = colors.blue,
-        neutral_hue: colors.Color | str = colors.gray,
+        neutral_hue: colors.Color | str = colors.yellow,
         spacing_size: sizes.Size | str = sizes.spacing_md,
         radius_size: sizes.Size | str = sizes.radius_md,
         text_size: sizes.Size | str = sizes.text_lg,
@@ -76,10 +87,8 @@ class Seafoam(Base):
             font_mono=font_mono,
         )
         super().set(
-            body_background_fill="repeating-linear-gradient(45deg, *primary_200, *primary_200 10px, *primary_50 10px, *primary_50 20px)",
-            body_background_fill_dark="repeating-linear-gradient(45deg, *primary_800, *primary_800 10px, *primary_900 10px, *primary_900 20px)",
-            #chat_primary_background_fill="linear-gradient(90deg, *primary_300, *secondary_400)",
-            #chat_primary_background_fill_hover="linear-gradient(90deg, *primary_200, *secondary_300)",
+            body_background_fill="lightblue",
+            body_background_fill_dark="lightblue",
             button_primary_text_color="white",
             button_primary_background_fill_dark="linear-gradient(90deg, *primary_600, *secondary_800)",
             slider_color="*secondary_300",
@@ -103,7 +112,7 @@ def predict(message, history):
         history_openai_format.append({"role": "assistant", "content":assistant})
     history_openai_format.append({"role": "user", "content": message})
   
-    response = client.chat.completions.create(model='gpt-4',
+    response = openai_client.chat.completions.create(model='gpt-4',
         messages = history_openai_format,
         temperature=1.0,
         stream=True)
@@ -111,14 +120,25 @@ def predict(message, history):
     partial_message = ""
     for chunk in response:
         if chunk.choices[0].delta.content is not None:
-              partial_message = partial_message + chunk.choices[0].delta.content
-              yield partial_message
+            
+            #print(chunk.choices[0].delta.content)
+            partial_message = partial_message + chunk.choices[0].delta.content
+            yield partial_message
+    eleventestfile.text_to_speech_file(partial_message)
+    time.sleep(1)
+    # with gr.Blocks() as demo:
+    #     gr.Audio(value="speech.mp3",autoplay=True)
+    song = AudioSegment.from_mp3("speech.mp3")
+    play(song)
+    # gr.Audio(value = "./speech.mp3",autoplay=True, show_download_button=True).play()
+    print(partial_message)
+    
 
 #with gr.Blocks(theme=seafoam) as demo:
 chat = gr.ChatInterface(predict, theme=seafoam)
 
-def repeat(name, count):
-    time.sleep(3)
-    return name * count
 #demo.launch()
+#output_audio = gr.Audio(label="Speech Output")
+#chat.submit(fn=tts, inputs=[text, model, voice, output_file_format, speed], outputs=output_audio, api_name="tts")
 chat.launch()
+
