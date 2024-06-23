@@ -5,17 +5,16 @@ import os
 from typing import Iterable
 from gradio.themes.base import Base
 from gradio.themes.utils import colors, fonts, sizes
-from pydub import AudioSegment
-from pydub.playback import play
 
 import time
 
 from elevenlabs.client import ElevenLabs
 import Text_to_Speech
+import MP3Player
 
 openai_client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
 
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+ELEVENLABS_API_KEY = "sk_88470f5e17b16678ddf2674be55a4066604f199f85a8bdeb"#os.getenv("ELEVENLABS_API_KEY")
 eleven_client = ElevenLabs(
     api_key=ELEVENLABS_API_KEY,
 )
@@ -125,11 +124,11 @@ def predict(message, history):
             partial_message = partial_message + chunk.choices[0].delta.content
             yield partial_message
     Text_to_Speech.text_to_speech_file(partial_message)
-    #time.sleep(1)
-    
-    song = AudioSegment.from_mp3("speech.mp3")
-    play(song)
-    print(partial_message)
-    
-chat = gr.ChatInterface(predict, theme=seafoam)
-chat.launch(share=True)
+ 
+    MP3Player.Play()
+
+try:
+    chat = gr.ChatInterface(predict, theme=seafoam)
+    chat.launch(share=True, debug=True)
+except:
+    pass
