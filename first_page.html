@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>
+        Adding and Removing Prices
+    </title>
+    <script>
+    function handleclick_male(){
+        document.getElementById('actionForm').action = 'openai_chat_stream.py';
+        }
+    function handleclick_female(){
+        document.getElementById('actionForm').action = '';
+    }
+    </script>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .buttons-container {
+            display: flex;
+            height: 100%;
+            width: 100vw;
+        }
+
+        .voice1, .voice2 {
+            flex: 1;
+            height: 100%;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .voice1:hover, .voice2:hover {
+            background-color: #555;
+            display: flex;
+            flex-grow: 1;
+            position: relative;
+            transition: flex-grow 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <form id="actionForm" method="post">
+        <div class="buttons-container">
+            <button type="button" class="voice1" name="voice1" onclick="handleClickMale()">Male</button>
+            <button type="button" class="voice2" name="voice2" onclick="handleClickFemale()">Female</button>
+        </div>
+    </form>
+
+    <script>
+        document.querySelectorAll('.voice1, .voice2').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.voice1, .voice2').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
