@@ -25,10 +25,18 @@ You are a storyteller for kids. You tell kids story like a nursery teacher does 
 13. Always ensure that the conclusion has a educating or comforting ending. The story does not always need to have an educative ending but it should always
 14. Feedback: Provide constructive feedback on the user's inputs to guide them in creating a cohesive and engaging story.
 15. Enjoyment: Above all, aim to create a fun and enjoyable storytelling experience for the user. Keep the story light-hearted and positive.
-
 """}]
 
-def CustomChatGPT(user_input):
+class OpenAiManager:
+    
+    def __init__(self):
+        self.chat_history = [] # Stores the entire conversation
+        try:
+            self.client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+        except TypeError:
+            exit("Ooops! You forgot to set OPENAI_API_KEY in your environment!")
+
+def CustomChatGPT(user_input, feedback):
     messages.append({"role": "user", "content": user_input})
     response = client.chat.completions.create(
         model="gpt-3.5-turbo-0125",
@@ -36,8 +44,44 @@ def CustomChatGPT(user_input):
     )
     ChatGPT_reply = response.choices[0].message.content
     messages.append({"role": "assistant", "content": ChatGPT_reply})
-    return ChatGPT_reply
+    
+    print(f"User input: {user_input}")
+    print(f"Story output: {ChatGPT_reply}")
+    print(f"Feedback: {feedback}")
+    #For now, let's just return a thank you message.
+    return ChatGPT_reply, "Thank you for your feedback!"
 
-demo = gradio.Interface(fn=CustomChatGPT, inputs = "text", outputs = "text", title = "Storyteller")
+def collect_feedback(feedback):
+    # Handle the feedback (e.g., log it, save it to a database, etc.)
+    print(f"Feedback received: {feedback}")
+    
+    # For now, let's just return a thank you message.
+    return "Thank you for your feedback!"
+
+# Gradio interface for story generation
+story_interface = gradio.Interface(
+    fn=CustomChatGPT,
+    inputs=gradio.Textbox(lines=2, label="Story Prompt"),
+    outputs=gradio.Textbox(label="Story"),
+    title="Story Generator",
+    description="Enter a story prompt and get a story."
+)
+
+# Gradio interface for feedback collection
+feedback_interface = gradio.Interface(
+    fn=collect_feedback,
+    inputs=gradio.Textbox(lines=2, label="Feedback"),
+    outputs=gradio.Textbox(label="Feedback Response"),
+    title="Feedback Collector",
+    description="Provide your feedback on the story.",
+)
+
+# Launch both interfaces in a combined tabbed interface
+demo = gradio.Interface(
+    [story_interface, feedback_interface],
+    "tabs",
+    title="Storyteller with Feedback",
+    description="Generate a story and provide feedback on it."
+)
 
 demo.launch(share=True)
