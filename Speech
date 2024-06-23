@@ -1,6 +1,0 @@
-from lmnt.api import Speech
-
-speech = Speech('28a9e795e6774171ae015d415357a3b9')
-
-async with Speech('28a9e795e6774171ae015d415357a3b9') as speech:
-  pass
